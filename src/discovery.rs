@@ -1,9 +1,11 @@
 use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr, UdpSocket};
+use std::time::Duration;
 use std::io;
 use std::str;
 use serde::{Serialize, Deserialize};
 
 const READ_BUFFER_SIZE: usize = 256;
+const DISCOVER_MAX: usize = 100;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct DiscoveryInfo {
@@ -51,23 +53,34 @@ impl DiscoveryServer {
     }
 
     pub fn discover(&self) -> io::Result<Vec<EndpointInfo>> {
-        let mut endpoints = Vec::new();
         let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
-        let socket = UdpSocket::bind(&local_addr)?; //TODO: timeout
+        let socket = UdpSocket::bind(&local_addr)?;
+        socket.set_read_timeout(Some(Duration::from_millis(50)))?;
+        socket.send_to(&[0], self.discovery_addr)?; //TODO: test with 0 bytes sent.
 
-        socket.send_to(&[1], self.discovery_addr)?;
         let mut buffer = [0; READ_BUFFER_SIZE];
-        let (size, remote_addr) = socket.recv_from(&mut buffer)?;
+        let mut endpoints = Vec::new();
 
-        //TODO: add a while during a time
-        let remote_info: DiscoveryInfo = bincode::deserialize(&buffer[0..size]).unwrap();
-        if remote_info != self.local_info {
-            let endpoint = EndpointInfo {
-                name: remote_info.name,
-                addr: SocketAddr::new(remote_addr.ip(), remote_info.port),
+        for _ in 0..DISCOVER_MAX {
+            match socket.recv_from(&mut buffer) {
+                Ok((size, remote_addr)) => {
+                    let remote_info: DiscoveryInfo = bincode::deserialize(&buffer[0..size]).unwrap();
+                    if remote_info != self.local_info {
+                        let endpoint = EndpointInfo {
+                            name: remote_info.name,
+                            addr: SocketAddr::new(remote_addr.ip(), remote_info.port),
+                        };
+
+                        //check is no
+                        endpoints.push(endpoint);
+                    }
+                },
+                Err(e) => match e.kind() {
+                    io::ErrorKind::WouldBlock => break,
+                    io::ErrorKind::TimedOut => break,
+                    _ => Err(e)?,
+                }
             };
-
-            endpoints.push(endpoint);
         }
         Ok(endpoints)
     }
