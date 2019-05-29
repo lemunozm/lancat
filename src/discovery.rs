@@ -1,38 +1,75 @@
-use std::net::{SocketAddr, IpAddr, Ipv4Addr, UdpSocket};
+use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr, UdpSocket};
 use std::io;
 use std::str;
+use serde::{Serialize, Deserialize};
+
+const READ_BUFFER_SIZE: usize = 256;
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct DiscoveryInfo {
+    name: String,
+    port: u16,
+}
 
 pub struct EndpointInfo {
-    address: SocketAddr,
-    name: String,
+    pub name: String,
+    pub addr: SocketAddr,
 }
 
-pub struct Server {
-    local_info: EndpointInfo,
+pub struct DiscoveryServer {
+    discovery_addr: SocketAddrV4,
+    serialized_info: Vec<u8>,
+    local_info: DiscoveryInfo,
 }
 
-pub fn discover() -> Vec<EndpointInfo> {
-    Vec::new()
-}
-
-impl Server {
-    pub fn new(service_port: u16, username: &String) -> Server {
-        let local_info = EndpointInfo {
-            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), service_port),
-            name: username.to_string(),
+impl DiscoveryServer {
+    pub fn new(discovery_addr: &SocketAddrV4, service_name: &String, service_port: u16) -> DiscoveryServer {
+        let info = DiscoveryInfo {
+            name: service_name.clone(),
+            port: service_port,
         };
 
-        Server { local_info: local_info }
+        DiscoveryServer {
+            discovery_addr: discovery_addr.clone(),
+            serialized_info: bincode::serialize(&info).unwrap(),
+            local_info: info,
+        }
     }
 
-    pub fn run(&self, listen_port: u16) -> io::Result<()> {
-        let local_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), listen_port);
-        let mut socket = UdpSocket::bind(&local_address)?;
+    pub fn run(&self) -> io::Result<()> {
+        let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, self.discovery_addr.port());
+        let socket = UdpSocket::bind(&local_addr)?; //TODO: reuseaddr
+        socket.join_multicast_v4(&self.discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
 
-        let mut buffer = [0; 128];
-        let (size, remote_address) = socket.recv_from(&mut buffer)?;
-        println!("Received message: {}, bytes: {}, from: {}", &str::from_utf8(&buffer).unwrap(), size, remote_address);
-        Ok(())
+        loop {
+            let mut buffer = [0; READ_BUFFER_SIZE];
+            let (_, remote_addr) = socket.recv_from(&mut buffer)?; //TODO: timeout
+            socket.send_to(&self.serialized_info, remote_addr)?;
+        }
+
+        //TODO: socket.leave_multicast_v4(&self.discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
+    }
+
+    pub fn discover(&self) -> io::Result<Vec<EndpointInfo>> {
+        let mut endpoints = Vec::new();
+        let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
+        let socket = UdpSocket::bind(&local_addr)?; //TODO: timeout
+
+        socket.send_to(&[1], self.discovery_addr)?;
+        let mut buffer = [0; READ_BUFFER_SIZE];
+        let (size, remote_addr) = socket.recv_from(&mut buffer)?;
+
+        //TODO: add a while during a time
+        let remote_info: DiscoveryInfo = bincode::deserialize(&buffer[0..size]).unwrap();
+        if remote_info != self.local_info {
+            let endpoint = EndpointInfo {
+                name: remote_info.name,
+                addr: SocketAddr::new(remote_addr.ip(), remote_info.port),
+            };
+
+            endpoints.push(endpoint);
+        }
+        Ok(endpoints)
     }
 }
 

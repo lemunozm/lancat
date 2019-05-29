@@ -1,8 +1,11 @@
 [package]
-name = "lanchat"
+name = "lancat"
 version = "0.1.0"
 authors = ["Luis Enrique Muñoz Martín <lemunozm@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.1"
 whoami = "0.5"
+clap = "2.32"
