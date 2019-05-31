@@ -3,6 +3,7 @@ extern crate clap;
 extern crate whoami;
 extern crate bincode;
 extern crate serde;
+extern crate net2;
 
 mod server;
 mod discovery;

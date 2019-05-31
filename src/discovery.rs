@@ -1,8 +1,10 @@
+use serde::{Serialize, Deserialize};
+use net2::UdpBuilder;
+
 use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr, UdpSocket};
 use std::time::Duration;
 use std::io;
 use std::str;
-use serde::{Serialize, Deserialize};
 
 const READ_BUFFER_SIZE: usize = 256;
 const DISCOVER_MAX: usize = 100;
@@ -62,22 +64,30 @@ impl DiscoveryServer {
         };
 
         let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, discovery_addr.port());
-        let socket = UdpSocket::bind(&local_addr)?; //TODO: reuseaddr
-        socket.join_multicast_v4(discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
+        let socket = UdpBuilder::new_v4()?.reuse_address(true)?.bind(local_addr)?;
+        socket.join_multicast_v4(&discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
 
         Ok(DiscoveryServer {
             discovery_addr: discovery_addr.clone(),
             serialized_info: bincode::serialize(&info).unwrap(),
-            socket: socket
+            socket: socket,
         })
     }
 
     pub fn listen(&self, timeout: Duration) -> io::Result<()> {
         let mut buffer = [0; 0];
-        self.socket.set_read_timeout(Some(timeout))?;
+        self.socket.set_read_timeout(Some(timeout)).unwrap();
         match self.socket.recv_from(&mut buffer) {
             Ok((_, remote_addr)) => {
-                self.socket.send_to(&self.serialized_info, remote_addr)?;
+                loop {
+                    match self.socket.send_to(&self.serialized_info, remote_addr) {
+                        Ok(_) => break (),
+                        Err(e) => match e.kind() {
+                            io::ErrorKind::PermissionDenied => (),
+                            _ => return Err(e),
+                        }
+                    };
+                }
             }
             Err(e) => match e.kind() {
                 io::ErrorKind::WouldBlock => (),
