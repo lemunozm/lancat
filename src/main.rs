@@ -32,42 +32,43 @@ fn main() {
         .arg(clap::Arg::with_name(SEARCH)
             .long(SEARCH)
             .short("s")
-            .help("only list the users in the lan")
+            .help("Only list the users in the LAN")
             .conflicts_with(LISTEN)
         )
         .arg(clap::Arg::with_name(LISTEN)
             .long(LISTEN)
             .short("l")
-            .help("listen mode")
+            .help("Listen mode")
             .conflicts_with(SEARCH)
         )
         .arg(clap::Arg::with_name(USERS)
             .long(USERS)
             .short("u")
             .value_name("users")
-            .help("user names to take into account for the communication")
-            .conflicts_with(SEARCH)
+            .help("User list to take into account for the communication")
+            .default_value("")
+            .hide_default_value(true)
         )
         .arg(clap::Arg::with_name(SERVICE_PORT)
             .long(SERVICE_PORT)
             .short("c")
             .value_name("number")
             .default_value("0")
-            .help("port used for cat communication")
+            .help("Port used for cat communication")
         )
         .arg(clap::Arg::with_name(DISCOVERY_PORT)
             .long(DISCOVERY_PORT)
             .short("p")
             .value_name("number")
             .default_value("2002")
-            .help("port used for discover 'lancat's in the lan")
+            .help("Port used for discover 'lancat's listening in the LAN")
         )
         .arg(clap::Arg::with_name(DISCOVERY_IP)
             .long(DISCOVERY_IP)
             .short("d")
             .value_name("ip")
             .default_value("239.255.0.1")
-            .help("multicast ip used for discovery")
+            .help("Multicast ip used for discovery")
         )
         .get_matches_from(args);
 
@@ -84,7 +85,7 @@ fn main() {
     if matches.is_present(SEARCH) {
         let remotes = discovery::discover(&discovery_addr).unwrap();
         for remote in remotes.iter() {
-            println!("Found remote at: {} - {}", remote.name, remote.addr);
+            println!("Found '{}' at: {}", remote.name, remote.addr);
         }
     }
     else if matches.is_present(LISTEN) {
