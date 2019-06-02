@@ -13,7 +13,8 @@ impl Server {
         })
     }
 
-    pub fn listen(&self, _timeout: Duration) -> io::Result<()> {
+    pub fn listen<F>(&self, _timeout: Duration, _on_data: F) -> io::Result<()>
+        where F: FnOnce(&[u8]) -> io::Result<()> {
         Ok(())
     }
 
