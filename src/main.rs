@@ -9,7 +9,7 @@ mod server;
 mod discovery;
 
 use server::Server;
-use discovery::DiscoveryServer;
+use discovery::{DiscoveryServer, EndpointInfo};
 
 use std::io;
 use std::io::Write;
@@ -80,29 +80,38 @@ fn main() {
     let discovery_port = value_t!(matches, DISCOVERY_PORT, String).unwrap();
     let discovery_addr = format!("{}:{}", discovery_ip, discovery_port).parse().unwrap();
 
-    let _users = values_t!(matches, USERS, String).unwrap();
+    let users = values_t!(matches, USERS, String).unwrap();
 
     if matches.is_present(SEARCH) {
         let remotes = discovery::discover(&discovery_addr).unwrap();
+        let remotes = filter_users(&remotes, &users);
         for remote in remotes.iter() {
             println!("Found '{}' at: {}", remote.name, remote.addr);
         }
     }
     else if matches.is_present(LISTEN) {
-        let server = Server::new(&service_addr).unwrap();
+        let on_accept = |_user: &str| -> io::Result<bool> {
+            Ok(true)
+        };
+
+        let on_data = |_user: &str, data: &[u8], _size: usize| -> io::Result<()> {
+            println!("data len {}", data.len());
+            io::stdout().write(data)?;
+            Ok(())
+        };
+
+        let mut server = Server::new(&service_addr, on_accept, on_data).unwrap();
         let listener_port = server.get_listener_port();
         let server_join = thread::spawn(move || {
             loop {
-                server.listen(Duration::from_millis(100), |data| {
-                    io::stdout().write(data)?; Ok(())
-                }).unwrap();
+                server.listen(Some(Duration::from_millis(100))).unwrap();
             }
         });
 
         let discovery_server = DiscoveryServer::new(&discovery_addr, &whoami::username(), listener_port).unwrap();
         let discovery_join = thread::spawn(move || {
             loop {
-                discovery_server.listen(Duration::from_millis(100)).unwrap();
+                discovery_server.listen(Some(Duration::from_millis(100))).unwrap();
             }
         });
 
@@ -111,6 +120,7 @@ fn main() {
     }
     else {
         let remotes = discovery::discover(&discovery_addr).unwrap();
+        let remotes = filter_users(&remotes, &users);
         let mut connections = vec![];
         for remote in remotes.iter() {
             let mut connection = TcpStream::connect(remote.addr).unwrap();
@@ -126,4 +136,20 @@ fn main() {
             }
         }
     }
+}
+
+fn filter_users(remotes: &Vec<EndpointInfo>, users: &Vec<String>) -> Vec<EndpointInfo> {
+    if users.is_empty() {
+        return remotes.clone();
+    }
+
+    let mut filtered = vec![];
+    for remote in remotes {
+        for user in users {
+            if remote.name == *user {
+                filtered.push(remote.clone());
+            }
+        }
+    }
+    filtered
 }

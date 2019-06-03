@@ -15,6 +15,7 @@ struct DiscoveryInfo {
     port: u16,
 }
 
+#[derive(PartialEq, Clone)]
 pub struct EndpointInfo {
     pub name: String,
     pub addr: SocketAddr,
@@ -74,9 +75,9 @@ impl DiscoveryServer {
         })
     }
 
-    pub fn listen(&self, timeout: Duration) -> io::Result<()> {
+    pub fn listen(&self, timeout: Option<Duration>) -> io::Result<()> {
         let mut buffer = [0; 0];
-        self.socket.set_read_timeout(Some(timeout)).unwrap();
+        self.socket.set_read_timeout(timeout).unwrap();
         match self.socket.recv_from(&mut buffer) {
             Ok((_, remote_addr)) => {
                 loop {
