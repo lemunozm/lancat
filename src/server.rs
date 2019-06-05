@@ -33,7 +33,7 @@ where C: FnMut(&str, SocketAddr, &[u8]) -> bool,
     pub fn new(addr: &SocketAddr, on_read: C) -> Server<C> {
         let listener = TcpListener::bind(addr).unwrap();
         let poll = Poll::new().unwrap();
-        poll.register(&listener, SERVER, Ready::readable(), PollOpt::edge()).unwrap();
+        poll.register(&listener, SERVER, Ready::readable(), PollOpt::edge() | PollOpt::level()).unwrap();
 
         Server {
             listener,
@@ -63,15 +63,17 @@ where C: FnMut(&str, SocketAddr, &[u8]) -> bool,
                         token => {
                             let connection = self.connections.get_mut(&token).unwrap();
                             let size = connection.stream.read(&mut self.read_buffer).unwrap();
+                            let mut offset = 0;
+
                             if connection.user.is_empty() {
-                                connection.user = str::from_utf8(&self.read_buffer[0..size]).unwrap().to_string();
+                                connection.user = bincode::deserialize(&self.read_buffer[0..size]).unwrap();
+                                offset = bincode::serialized_size(&connection.user).unwrap() as usize;
                             }
-                            else {
-                                let addr = connection.stream.local_addr().unwrap();
-                                if !(self.on_read)(&connection.user, addr, &self.read_buffer[0..size]) {
-                                    self.poll.deregister(&connection.stream).unwrap();
-                                    self.connections.remove(&token);
-                                }
+
+                            let addr = connection.stream.local_addr().unwrap();
+                            if !(self.on_read)(&connection.user, addr, &self.read_buffer[offset..size]) {
+                                self.poll.deregister(&connection.stream).unwrap();
+                                self.connections.remove(&token);
                             }
                         },
                     }
