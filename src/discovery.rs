@@ -27,11 +27,11 @@ pub struct DiscoveryServer {
     socket: UdpSocket,
 }
 
-pub fn discover(discovery_addr: &SocketAddrV4) -> io::Result<Vec<EndpointInfo>> {
+pub fn discover(discovery_addr: &SocketAddrV4) -> Vec<EndpointInfo> {
     let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0);
-    let socket = UdpSocket::bind(&local_addr)?;
-    socket.set_read_timeout(Some(Duration::from_millis(50)))?;
-    socket.send_to(&[0], discovery_addr)?;
+    let socket = UdpSocket::bind(&local_addr).unwrap();
+    socket.set_read_timeout(Some(Duration::from_millis(50))).unwrap();
+    socket.send_to(&[0], discovery_addr).unwrap();
 
     let mut buffer = [0; READ_BUFFER_SIZE];
     let mut endpoints = Vec::new();
@@ -50,33 +50,33 @@ pub fn discover(discovery_addr: &SocketAddrV4) -> io::Result<Vec<EndpointInfo>> 
             Err(e) => match e.kind() {
                 io::ErrorKind::WouldBlock => break,
                 io::ErrorKind::TimedOut => break,
-                _ => return Err(e),
+                e => Err(e).unwrap(),
             }
         };
     }
-    Ok(endpoints)
+    endpoints
 }
 
 impl DiscoveryServer {
-    pub fn new(discovery_addr: &SocketAddrV4, service_name: &String, service_port: u16) -> io::Result<DiscoveryServer> {
+    pub fn new(discovery_addr: &SocketAddrV4, service_name: &String, service_port: u16) -> DiscoveryServer {
         let info = DiscoveryInfo {
             name: service_name.clone(),
             port: service_port,
         };
 
         let local_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, discovery_addr.port());
-        let socket = UdpBuilder::new_v4()?.reuse_address(true)?.bind(local_addr)?;
-        socket.join_multicast_v4(&discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED)?;
+        let socket = UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(local_addr).unwrap();
+        socket.join_multicast_v4(&discovery_addr.ip(), &Ipv4Addr::UNSPECIFIED).unwrap();
 
-        Ok(DiscoveryServer {
+        DiscoveryServer {
             discovery_addr: discovery_addr.clone(),
             serialized_info: bincode::serialize(&info).unwrap(),
             socket: socket,
-        })
+        }
     }
 
-    pub fn listen(&self, timeout: Option<Duration>) -> io::Result<()> {
-        let mut buffer = [0; 0];
+    pub fn listen(&self, timeout: Option<Duration>) {
+        let mut buffer = [0; 0]; //CHECK: the behaviour in windows
         self.socket.set_read_timeout(timeout).unwrap();
         match self.socket.recv_from(&mut buffer) {
             Ok((_, remote_addr)) => {
@@ -85,7 +85,7 @@ impl DiscoveryServer {
                         Ok(_) => break (),
                         Err(e) => match e.kind() {
                             io::ErrorKind::PermissionDenied => (),
-                            _ => return Err(e),
+                            _ => Err(e).unwrap(),
                         }
                     };
                 }
@@ -93,10 +93,9 @@ impl DiscoveryServer {
             Err(e) => match e.kind() {
                 io::ErrorKind::WouldBlock => (),
                 io::ErrorKind::TimedOut => (),
-                _ => return Err(e),
+                _ => Err(e).unwrap(),
             }
         }
-        Ok(())
     }
 }
 

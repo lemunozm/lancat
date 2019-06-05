@@ -15,7 +15,7 @@ use std::io;
 use std::io::Write;
 use std::thread;
 use std::time::Duration;
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 
 const SEARCH: &str = "search";
 const LISTEN: &str = "listen";
@@ -46,8 +46,6 @@ fn main() {
             .short("u")
             .value_name("users")
             .help("User list to take into account for the communication")
-            .default_value("")
-            .hide_default_value(true)
         )
         .arg(clap::Arg::with_name(SERVICE_PORT)
             .long(SERVICE_PORT)
@@ -80,38 +78,47 @@ fn main() {
     let discovery_port = value_t!(matches, DISCOVERY_PORT, String).unwrap();
     let discovery_addr = format!("{}:{}", discovery_ip, discovery_port).parse().unwrap();
 
-    let users = values_t!(matches, USERS, String).unwrap();
+    let mut users = vec![];
+    if matches.is_present(USERS) {
+        users = values_t!(matches, USERS, String).unwrap();
+    }
 
     if matches.is_present(SEARCH) {
-        let remotes = discovery::discover(&discovery_addr).unwrap();
+        let remotes = discovery::discover(&discovery_addr);
         let remotes = filter_users(&remotes, &users);
         for remote in remotes.iter() {
             println!("Found '{}' at: {}", remote.name, remote.addr);
         }
     }
     else if matches.is_present(LISTEN) {
-        let on_accept = |_user: &str| -> io::Result<bool> {
-            Ok(true)
+        let mut last_print_user = String::new();
+
+        let on_data = move |user: &str, addr: SocketAddr, data: &[u8]| {
+            if !users.is_empty() && !users.iter().any(|x| x == user) {
+                return false;
+            }
+
+            if last_print_user != user {
+                println!("============ {} - {} ============", user, addr); //TODO: terminal size
+                last_print_user = String::from(user);
+            }
+
+            io::stdout().write(data).unwrap();
+            true
         };
 
-        let on_data = |_user: &str, data: &[u8], _size: usize| -> io::Result<()> {
-            println!("data len {}", data.len());
-            io::stdout().write(data)?;
-            Ok(())
-        };
-
-        let mut server = Server::new(&service_addr, on_accept, on_data).unwrap();
+        let mut server = Server::new(&service_addr, on_data);
         let listener_port = server.get_listener_port();
         let server_join = thread::spawn(move || {
             loop {
-                server.listen(Some(Duration::from_millis(100))).unwrap();
+                server.listen(Some(Duration::from_millis(100)));
             }
         });
 
-        let discovery_server = DiscoveryServer::new(&discovery_addr, &whoami::username(), listener_port).unwrap();
+        let discovery_server = DiscoveryServer::new(&discovery_addr, &whoami::username(), listener_port);
         let discovery_join = thread::spawn(move || {
             loop {
-                discovery_server.listen(Some(Duration::from_millis(100))).unwrap();
+                discovery_server.listen(Some(Duration::from_millis(100)));
             }
         });
 
@@ -119,7 +126,7 @@ fn main() {
         server_join.join().unwrap();
     }
     else {
-        let remotes = discovery::discover(&discovery_addr).unwrap();
+        let remotes = discovery::discover(&discovery_addr);
         let remotes = filter_users(&remotes, &users);
         let mut connections = vec![];
         for remote in remotes.iter() {
@@ -128,8 +135,8 @@ fn main() {
             connections.push(connection);
         }
 
-        let mut input = String::new();
         loop {
+            let mut input = String::new();
             io::stdin().read_line(&mut input).unwrap();
             for mut connection in &connections {
                 connection.write(&input.as_bytes()).unwrap();
