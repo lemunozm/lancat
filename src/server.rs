@@ -64,7 +64,7 @@ where C: FnMut(&str, SocketAddr, &[u8]) -> bool,
                             let connection = self.connections.get_mut(&token).unwrap();
                             let size = connection.stream.read(&mut self.read_buffer).unwrap();
                             if connection.user.is_empty() {
-                                connection.user = str::from_utf8(&self.read_buffer).unwrap().to_string();
+                                connection.user = str::from_utf8(&self.read_buffer[0..size]).unwrap().to_string();
                             }
                             else {
                                 let addr = connection.stream.local_addr().unwrap();
