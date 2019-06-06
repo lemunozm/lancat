@@ -2,6 +2,7 @@ extern crate bincode;
 extern crate serde;
 extern crate net2;
 extern crate crossbeam;
+extern crate term_size;
 
 mod server;
 mod discovery;
@@ -58,13 +59,13 @@ where
     W: Write + Send + 'static
 {
     let mut last_print_user = String::new();
-    let on_data = move |user: &str, remote: SocketAddr, data: &[u8]| -> bool {
+    let on_data = move |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
         if let Some(users) = users {
             return !users.iter().any(|u| u == user);
         }
 
         if verbose && last_print_user != user {
-            println!("============ {} - {} ============", user, remote); //TODO: terminal size
+            print_user_division(user, &remote);
             last_print_user = String::from(user);
         }
 
@@ -87,6 +88,15 @@ where
             }
         });
     }).unwrap();
+}
+
+fn print_user_division(name: &str, remote: &SocketAddr) {
+    let term_width = term_size::dimensions_stdout().unwrap().0;
+    let info = format!(" {} - {} ", name, remote);
+    let margin_width = (term_width - info.len()) / 2;
+    let margin = String::from_utf8(vec![b'='; margin_width]).unwrap();
+    let extra_digit = term_width > margin_width * 2 + info.len();
+    println!("{}{}{}{}", margin, info, margin, if extra_digit {"="} else {""});
 }
 
 fn find_remotes(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>) -> Vec<EndpointInfo> {

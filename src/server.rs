@@ -28,7 +28,7 @@ pub struct Server<C>
 }
 
 impl<C> Server<C>
-where C: FnMut(&str, SocketAddr, &[u8]) -> bool,
+where C: FnMut(&str, &SocketAddr, &[u8]) -> bool,
 {
     pub fn new(addr: &SocketAddr, on_read: C) -> Server<C> {
         let listener = TcpListener::bind(addr).unwrap();
@@ -73,8 +73,8 @@ where C: FnMut(&str, SocketAddr, &[u8]) -> bool,
                                 }
 
                                 if size > offset {
-                                    let addr = connection.stream.local_addr().unwrap();
-                                    forced_to_close = !(self.on_read)(&connection.user, addr, &self.read_buffer[offset..size]);
+                                    let addr = connection.stream.peer_addr().unwrap();
+                                    forced_to_close = !(self.on_read)(&connection.user, &addr, &self.read_buffer[offset..size]);
                                 }
                             }
 
