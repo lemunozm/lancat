@@ -9,6 +9,7 @@ const SEARCH: &str = "search";
 const LISTEN: &str = "listen";
 const USERS: &str = "users";
 const NAME: &str = "name";
+const QUIET: &str = "quiet";
 const DISCOVERY_PORT: &str = "discovery-port";
 const DISCOVERY_IP: &str = "discovery-ip";
 const SERVICE_PORT: &str = "service-port";
@@ -46,6 +47,11 @@ fn main() {
             .default_value(&user)
             .help("User name identification in the LAN")
         )
+        .arg(clap::Arg::with_name(QUIET)
+            .long(QUIET)
+            .short("q")
+            .help("Do not show the lancat specific output")
+        )
         .arg(clap::Arg::with_name(SERVICE_PORT)
             .long(SERVICE_PORT)
             .short("c")
@@ -78,6 +84,7 @@ fn main() {
     let discovery_addr = format!("{}:{}", discovery_ip, discovery_port).parse().unwrap();
 
     let user_name = value_t!(matches, NAME, String).unwrap();
+    let verbose = !matches.is_present(QUIET);
 
     let users =
     if matches.is_present(USERS) {
@@ -91,10 +98,9 @@ fn main() {
         lancat::search(&discovery_addr, users.as_ref());
     }
     else if matches.is_present(LISTEN) {
-        lancat::listen(&discovery_addr, None, &user_name, &service_addr, io::stdout());
+        lancat::listen(&discovery_addr, None, &user_name, &service_addr, verbose, io::stdout());
     }
     else {
         lancat::speak(&discovery_addr, users.as_ref(), &user_name, io::stdin());
     }
 }
-

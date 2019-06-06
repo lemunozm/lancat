@@ -52,6 +52,7 @@ pub fn listen<W>(
         users: Option<&Vec<String>>,
         user_name: &str,
         service_addr: &SocketAddr,
+        verbose: bool,
         mut output: W)
 where
     W: Write + Send + 'static
@@ -62,7 +63,7 @@ where
             return !users.iter().any(|u| u == user);
         }
 
-        if last_print_user != user {
+        if verbose && last_print_user != user {
             println!("============ {} - {} ============", user, remote); //TODO: terminal size
             last_print_user = String::from(user);
         }
