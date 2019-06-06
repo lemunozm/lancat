@@ -11,6 +11,5 @@ whoami = "0.5"
 clap = "2.32"
 net2 = "0.2"
 mio = "0.6"
+crossbeam = "0.7"
 
-[profile.dev]
-debug = true

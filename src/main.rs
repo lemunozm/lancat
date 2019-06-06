@@ -19,6 +19,8 @@ fn main() {
     let matches = clap::App::new("lancat")
         .version(&crate_version!()[..])
         .version_short("v")
+        .author("https://github.com/lemunozm/lancat")
+        .about("cat utility through LAN communication")
         .arg(clap::Arg::with_name(SEARCH)
             .long(SEARCH)
             .short("s")
@@ -79,20 +81,20 @@ fn main() {
 
     let users =
     if matches.is_present(USERS) {
-        values_t!(matches, USERS, String).unwrap()
+        Some(values_t!(matches, USERS, String).unwrap())
     }
     else {
-        vec![]
+        None
     };
 
     if matches.is_present(SEARCH) {
-        lancat::search(discovery_addr, users);
+        lancat::search(&discovery_addr, users.as_ref());
     }
     else if matches.is_present(LISTEN) {
-        lancat::listen(user_name, users, discovery_addr, service_addr, io::stdout());
+        lancat::listen(&discovery_addr, None, &user_name, &service_addr, io::stdout());
     }
     else {
-        lancat::speak(user_name, users, discovery_addr, io::stdin());
+        lancat::speak(&discovery_addr, users.as_ref(), &user_name, io::stdin());
     }
 }
 

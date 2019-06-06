@@ -58,9 +58,9 @@ pub fn discover(discovery_addr: &SocketAddrV4) -> Vec<EndpointInfo> {
 }
 
 impl DiscoveryServer {
-    pub fn new(discovery_addr: &SocketAddrV4, service_name: &String, service_port: u16) -> DiscoveryServer {
+    pub fn new(discovery_addr: &SocketAddrV4, service_name: &str, service_port: u16) -> DiscoveryServer {
         let info = DiscoveryInfo {
-            name: service_name.clone(),
+            name: String::from(service_name),
             port: service_port,
         };
 
