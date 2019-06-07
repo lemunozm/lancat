@@ -12,6 +12,7 @@ use crossbeam::thread;
 use server::Server;
 use discovery::{DiscoveryServer, EndpointInfo};
 
+use std::io;
 use std::io::Write;
 use std::io::Read;
 use std::time::Duration;
@@ -43,11 +44,18 @@ where R: Read + 'static {
         let mut input_buffer = [0; READ_BUFFER_SIZE];
         let size = input.read(&mut input_buffer).unwrap();
         if size == 0 {
-            return
+           break
         }
-        for mut connection in &connections {
-            connection.write(&input_buffer[0..size]).unwrap();
-        }
+
+        connections.retain(|mut connection|{
+            match connection.write(&input_buffer[0..size]) {
+                Ok(_) => true,
+                Err(e) => match e.kind() {
+                    io::ErrorKind::BrokenPipe => false,
+                    _ => Err(e).unwrap(),
+                },
+            }
+        });
     }
 }
 
@@ -94,7 +102,7 @@ where
 }
 
 fn print_user_division(name: &str, remote: &SocketAddr) {
-    let term_width = term_size::dimensions_stdout().unwrap().0;
+    let term_width = term_size::dimensions().unwrap().0;
     let info = format!(" {} - {} ", name, remote);
     let margin_width = (term_width - info.len()) / 2;
     let margin = String::from_utf8(vec![b'='; margin_width]).unwrap();
