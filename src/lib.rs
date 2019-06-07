@@ -42,6 +42,9 @@ where R: Read + 'static {
     loop {
         let mut input_buffer = [0; READ_BUFFER_SIZE];
         let size = input.read(&mut input_buffer).unwrap();
+        if size == 0 {
+            return
+        }
         for mut connection in &connections {
             connection.write(&input_buffer[0..size]).unwrap();
         }
