@@ -28,7 +28,9 @@ pub fn search(discovery_addr: &SocketAddrV4) {
 }
 
 pub fn talk<R>(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>, user_name: &str, mut input: R)
-where R: Read + 'static {
+where
+    R: Read + 'static
+{
     let remotes = discovery::discover(&discovery_addr);
     let remotes = match users {
         Some(users) => remotes.into_iter().filter(|r| users.iter().any(|u| *u == r.name)).collect(),
@@ -73,27 +75,27 @@ where
     C: FnMut(&str, &SocketAddr) + Send + Sync,
     W: Write + Send
 {
-    let mut server = Server::new(&service_addr);
+    let mut last_user = String::new();
+    let on_data = |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
+        if let Some(users) = users {
+            if !users.iter().any(|u| u == user) {
+                return false;
+            }
+        }
+        if last_user != user {
+            callback(user, remote);
+            last_user = String::from(user);
+        }
+        output.write(data).unwrap();
+        true
+    };
+    let mut server = Server::new(&service_addr, on_data);
     let discovery_server = DiscoveryServer::new(&discovery_addr, &user_name, server.get_listener_port());
 
-    let mut last_user = String::new();
     thread::scope(|s| {
         s.spawn(|_| {
             loop {
-                let on_data = |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
-                    if let Some(users) = users {
-                        if !users.iter().any(|u| u == user) {
-                            return false;
-                        }
-                    }
-                    if last_user != user {
-                        callback(user, remote);
-                        last_user = String::from(user);
-                    }
-                    output.write(data).unwrap();
-                    true
-                };
-                server.listen(Some(Duration::from_millis(100)), on_data);
+                server.listen(Some(Duration::from_millis(100)));
             }
         });
 

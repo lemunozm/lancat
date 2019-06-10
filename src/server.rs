@@ -16,7 +16,7 @@ struct Connection {
     stream: TcpStream,
 }
 
-pub struct Server
+pub struct Server<C>
 {
     listener: TcpListener,
     read_buffer: [u8; READ_BUFFER_SIZE],
@@ -24,11 +24,13 @@ pub struct Server
     events: Events,
     connections: HashMap<Token, Connection>,
     connections_accepted: usize,
+    on_data: C,
 }
 
-impl Server
-{
-    pub fn new(addr: &SocketAddr) -> Server {
+impl<C> Server<C>
+where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
+
+    pub fn new(addr: &SocketAddr, on_data: C) -> Server<C> {
         let listener = TcpListener::bind(addr).unwrap();
         let poll = Poll::new().unwrap();
         poll.register(&listener, SERVER, Ready::readable(), PollOpt::level()).unwrap();
@@ -40,11 +42,11 @@ impl Server
             events: Events::with_capacity(1024),
             connections: HashMap::new(),
             connections_accepted: 0,
+            on_data: on_data
         }
     }
 
-    pub fn listen<C>(&mut self, timeout: Option<Duration>, mut callback: C)
-    where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
+    pub fn listen(&mut self, timeout: Option<Duration>) {
         match self.poll.poll(&mut self.events, timeout) {
             Ok(_) => {
                 for event in self.events.iter() {
@@ -72,7 +74,7 @@ impl Server
 
                                 if size > offset {
                                     let addr = connection.stream.peer_addr().unwrap();
-                                    forced_to_close = !callback(&connection.user, &addr, &self.read_buffer[offset..size]);
+                                    forced_to_close = !(self.on_data)(&connection.user, &addr, &self.read_buffer[offset..size]);
                                 }
                             }
 
