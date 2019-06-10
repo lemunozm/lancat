@@ -95,12 +95,12 @@ fn main() {
     };
 
     if matches.is_present(SEARCH) {
-        lancat::search(&discovery_addr, users.as_ref());
+        lancat::search(&discovery_addr);
     }
     else if matches.is_present(LISTEN) {
-        lancat::listen(&discovery_addr, None, &user_name, &service_addr, verbose, io::stdout());
+        lancat::listen(&discovery_addr, users.as_ref(), &user_name, &service_addr, verbose, io::stdout());
     }
     else {
-        lancat::speak(&discovery_addr, users.as_ref(), &user_name, io::stdin());
+        lancat::talk(&discovery_addr, users.as_ref(), &user_name, io::stdin());
     }
 }

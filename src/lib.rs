@@ -10,7 +10,7 @@ mod discovery;
 use crossbeam::thread;
 
 use server::Server;
-use discovery::{DiscoveryServer, EndpointInfo};
+use discovery::DiscoveryServer;
 
 use std::io;
 use std::io::Write;
@@ -20,17 +20,20 @@ use std::net::{SocketAddr, SocketAddrV4, TcpStream};
 
 const READ_BUFFER_SIZE: usize = 1024;
 
-pub fn search(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>) {
-    let remotes = find_remotes(discovery_addr, users);
-
+pub fn search(discovery_addr: &SocketAddrV4) {
+    let remotes = discovery::discover(&discovery_addr);
     for remote in remotes.iter() {
         println!("Found '{}' at: {}", remote.name, remote.addr);
     }
 }
 
-pub fn speak<R>(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>, user_name: &str, mut input: R)
+pub fn talk<R>(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>, user_name: &str, mut input: R)
 where R: Read + 'static {
-    let remotes = find_remotes(discovery_addr, users);
+    let remotes = discovery::discover(&discovery_addr);
+    let remotes = match users {
+        Some(users) => remotes.into_iter().filter(|r| users.iter().any(|u| *u == r.name)).collect(),
+        None => remotes,
+    };
 
     let mut connections = vec![];
     for remote in remotes.iter() {
@@ -108,12 +111,4 @@ fn print_user_division(name: &str, remote: &SocketAddr) {
     let margin = String::from_utf8(vec![b'='; margin_width]).unwrap();
     let extra_digit = term_width > margin_width * 2 + info.len();
     println!("{}{}{}{}", margin, info, margin, if extra_digit {"="} else {""});
-}
-
-fn find_remotes(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>) -> Vec<EndpointInfo> {
-    let remotes = discovery::discover(&discovery_addr);
-    match users {
-        Some(users) => remotes.into_iter().filter(|r| users.iter().any(|u| *u == r.name)).collect(),
-        None => remotes,
-    }
 }
