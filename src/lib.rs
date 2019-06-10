@@ -62,37 +62,38 @@ where R: Read + 'static {
     }
 }
 
-pub fn listen<W>(
+pub fn listen<W, C>(
         discovery_addr: &SocketAddrV4,
         users: Option<&Vec<String>>,
         user_name: &str,
         service_addr: &SocketAddr,
-        verbose: bool,
+        mut callback: C,
         mut output: W)
 where
-    W: Write + Send + 'static
+    C: FnMut(&str, &SocketAddr) + Send + Sync,
+    W: Write + Send
 {
-    let mut last_print_user = String::new();
-    let on_data = move |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
-        if let Some(users) = users {
-            return !users.iter().any(|u| u == user);
-        }
-
-        if verbose && last_print_user != user {
-            print_user_division(user, &remote);
-            last_print_user = String::from(user);
-        }
-
-        output.write(data).unwrap();
-        true
-    };
-
-    let mut server = Server::new(&service_addr, on_data);
+    let mut server = Server::new(&service_addr);
     let discovery_server = DiscoveryServer::new(&discovery_addr, &user_name, server.get_listener_port());
+
+    let mut last_user = String::new();
     thread::scope(|s| {
         s.spawn(|_| {
             loop {
-                server.listen(Some(Duration::from_millis(100)));
+                let on_data = |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
+                    if let Some(users) = users {
+                        if !users.iter().any(|u| u == user) {
+                            return false;
+                        }
+                    }
+                    if last_user != user {
+                        callback(user, remote);
+                        last_user = String::from(user);
+                    }
+                    output.write(data).unwrap();
+                    true
+                };
+                server.listen(Some(Duration::from_millis(100)), on_data);
             }
         });
 
@@ -104,11 +105,3 @@ where
     }).unwrap();
 }
 
-fn print_user_division(name: &str, remote: &SocketAddr) {
-    let term_width = term_size::dimensions().unwrap().0;
-    let info = format!(" {} - {} ", name, remote);
-    let margin_width = (term_width - info.len()) / 2;
-    let margin = String::from_utf8(vec![b'='; margin_width]).unwrap();
-    let extra_digit = term_width > margin_width * 2 + info.len();
-    println!("{}{}{}{}", margin, info, margin, if extra_digit {"="} else {""});
-}

@@ -4,6 +4,7 @@ extern crate whoami;
 extern crate lancat;
 
 use std::io;
+use std::net::SocketAddr;
 
 const SEARCH: &str = "search";
 const LISTEN: &str = "listen";
@@ -98,9 +99,21 @@ fn main() {
         lancat::search(&discovery_addr);
     }
     else if matches.is_present(LISTEN) {
-        lancat::listen(&discovery_addr, users.as_ref(), &user_name, &service_addr, verbose, io::stdout());
+        let on_listen = |name: &str, remote: &SocketAddr| {
+            if verbose {
+                let term_width = term_size::dimensions().unwrap().0;
+                let info = format!(" {} - {} ", name, remote);
+                let margin_width = (term_width - info.len()) / 2;
+                let margin = String::from_utf8(vec![b'='; margin_width]).unwrap();
+                let extra_digit = term_width > margin_width * 2 + info.len();
+                println!("{}{}{}{}", margin, info, margin, if extra_digit {"="} else {""});
+            }
+        };
+
+        lancat::listen(&discovery_addr, users.as_ref(), &user_name, &service_addr, on_listen, io::stdout());
     }
     else {
         lancat::talk(&discovery_addr, users.as_ref(), &user_name, io::stdin());
     }
 }
+
