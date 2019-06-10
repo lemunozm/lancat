@@ -1,6 +1,6 @@
 [package]
 name = "lancat"
-version = "0.1.0"
+version = "0.1.0-dev"
 authors = ["Luis Enrique Muñoz Martín <lemunozm@gmail.com>"]
 edition = "2018"
 

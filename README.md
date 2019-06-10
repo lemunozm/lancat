@@ -1,22 +1,22 @@
 # What is *lancat*?
-*lancat* is an utility that extend the behavior of `cat` tool to the LAN.
+*lancat* is a tool that extend the behavior of `cat` linux utility to the LAN.
 It sends a multicast message for searching *lancat* listeners in the LAN,
-and creates an one-to-one tcp connection for each listener found to transfer the information,
-in a reliable way and without saturate the network.
+then creates one-to-one tcp connection for each listener found in order to transfer the information
+in a reliable way and without saturating the network.
 
 # Installation
-`lancat` is a *rust* application, so you need the *cargo rust*'s utility installed in your computer in order to compile it.
-Place into the repository and run:
+`lancat` is a [*rust*][rust] application, so you can use the [*cargo*][cargo] package manager in order to install it.
+For it, place into the repository and run:
 ```
 $ cargo install --path .
 ```
-In you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* in everywhere in your computer!.
+In you have `~/.cargo/bin` in your PATH, you will be able to use *lancat*  everywhere in your computer!
 
 # How it works?
 It has two main modes, for writing to the LAN and for reading from the LAN.
 
 ## To the LAN
-For write data to the LAN, run:
+For writing data to the LAN, run:
 ```
 $ lancat
 hello lan
@@ -28,7 +28,7 @@ $ lancat < to_share.txt
 ```
 
 ## From the LAN
-For listen the data from the LAN run `lancat -l` (`-l` will enable the listen mode):
+For listening data from the LAN run `lancat` in listen mode with `-l`:
 ```
 $ lancat -l
 =========== username - ip:port ===========
@@ -43,28 +43,24 @@ the `-q` flag (also `--quiet`) will avoid to write the *user name line* into the
 
 ## Filtering users
 By default *lancat* notifies to the LAN with your OS user name.
-You can change it with the `-n` flag.
+It is possbile to change this name with the `-n` flag.
 
-You can filter for sending messages only to certain users:
+You can filter for sending or receiving messages only for certain users:
 ```
-$ lancat -u -q user1 user2
+$ lancat -u user1 user2
 ```
-Only user1 and user2 will listen.
-
-And tou can filter also to receive messages only from concrete users:
 ```
 $ lancat -l -u user1 user2
 ```
-Only user1 and user2 will be listened.
 
-In order to see which users are listening the lan, you can run *lancat* in the search mode with `-s`
+In order to see which users are listening the lan, you can run *lancat* in the *search mode* with `-s`
 ```
 $ lancat -s
 ```
 
 For see all available options see the help: `lancat --help`.
 
-# Usage examples
+# Usage Examples
 ## Pair to pair LAN communication
 ### Default user names
 We send a message filtering by *user1*:
@@ -76,7 +72,7 @@ We recive messages filtering by *user2*:
 $ lancat -l -q -u user2
 Hello user1
 ```
-Only users with names user1 and user2 will be able to write / read the communication.
+Only users with names *user1* and *user2* will be able to write / read the communication.
 
 ### Aliasing names
 We send a message only to *Pepito* identifying as *Pepito*:
@@ -89,3 +85,5 @@ $ lancat -l -q -n Juanito -u Pepito
 Hello Juanito, I'm Pepito
 ```
 
+[rust]: https://www.rust-lang.org/
+[cargo]: https://doc.rust-lang.org/cargo/getting-started/installation.html
