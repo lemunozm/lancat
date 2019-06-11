@@ -5,10 +5,9 @@ then creates one-to-one tcp connection for each listener found in order to trans
 in a reliable way and without saturating the network.
 
 # Installation
-`lancat` is a [*rust*][rust] application, so you can use the [*cargo*][cargo] package manager in order to install it.
-For it, place into the repository and run:
+`lancat` is a [*rust*][rust] application. You can use the [*cargo*][cargo] package manager in order to install it.
 ```
-$ cargo install --path .
+$ cargo install lancat
 ```
 If you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* everywhere in your computer!
 
