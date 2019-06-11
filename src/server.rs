@@ -24,13 +24,14 @@ pub struct Server<C>
     events: Events,
     connections: HashMap<Token, Connection>,
     connections_accepted: usize,
+    once: bool,
     on_data: C,
 }
 
 impl<C> Server<C>
 where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
 
-    pub fn new(addr: &SocketAddr, on_data: C) -> Server<C> {
+    pub fn new(addr: &SocketAddr, once: bool, on_data: C) -> Server<C> {
         let listener = TcpListener::bind(addr).unwrap();
         let poll = Poll::new().unwrap();
         poll.register(&listener, SERVER, Ready::readable(), PollOpt::level()).unwrap();
@@ -42,11 +43,12 @@ where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
             events: Events::with_capacity(1024),
             connections: HashMap::new(),
             connections_accepted: 0,
-            on_data: on_data
+            once,
+            on_data,
         }
     }
 
-    pub fn listen(&mut self, timeout: Option<Duration>) {
+    pub fn listen(&mut self, timeout: Option<Duration>) -> bool {
         match self.poll.poll(&mut self.events, timeout) {
             Ok(_) => {
                 for event in self.events.iter() {
@@ -54,12 +56,14 @@ where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
                         SERVER => {
                             let (stream, _) = self.listener.accept().unwrap();
 
-                            self.connections_accepted += 1;
-                            let token = Token(self.connections_accepted);
+                            if !self.once || self.once && self.connections_accepted == 0 {
+                                self.connections_accepted += 1;
+                                let token = Token(self.connections_accepted);
 
-                            self.poll.register(&stream, token, Ready::readable(), PollOpt::edge() | PollOpt::level()).unwrap();
-                            self.connections.insert(token, Connection{ user: String::new(), stream });
-                        },
+                                self.poll.register(&stream, token, Ready::readable(), PollOpt::edge() | PollOpt::level()).unwrap();
+                                self.connections.insert(token, Connection{ user: String::new(), stream });
+                            }
+                        }
                         token => {
                             let connection = self.connections.get_mut(&token).unwrap();
                             let size = connection.stream.read(&mut self.read_buffer).unwrap();
@@ -81,14 +85,18 @@ where C: FnMut(&str, &SocketAddr, &[u8]) -> bool {
                             if size == 0 || forced_to_close {
                                 self.poll.deregister(&connection.stream).unwrap();
                                 self.connections.remove(&token);
+                                if self.once {
+                                    return false;
+                                }
                             }
                         },
                     }
                 }
+                true
             }
             Err(e) => match e.kind() {
-                io::ErrorKind::WouldBlock => (),
-                io::ErrorKind::TimedOut => (),
+                io::ErrorKind::WouldBlock => true,
+                io::ErrorKind::TimedOut => true,
                 _ => Err(e).unwrap(),
             }
         }

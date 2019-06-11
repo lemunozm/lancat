@@ -5,7 +5,7 @@ extern crate crossbeam;
 extern crate term_size;
 
 mod server;
-mod discovery;
+pub mod discovery;
 
 use crossbeam::thread;
 
@@ -17,17 +17,15 @@ use std::io::Write;
 use std::io::Read;
 use std::time::Duration;
 use std::net::{SocketAddr, SocketAddrV4, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 const READ_BUFFER_SIZE: usize = 1024;
 
-pub fn search(discovery_addr: &SocketAddrV4) {
-    let remotes = discovery::discover(&discovery_addr);
-    for remote in remotes.iter() {
-        println!("Found '{}' at: {}", remote.name, remote.addr);
-    }
-}
-
-pub fn talk<R>(discovery_addr: &SocketAddrV4, users: Option<&Vec<String>>, user_name: &str, mut input: R)
+pub fn talk<R>(
+        discovery_addr: &SocketAddrV4,
+        users: Option<&Vec<String>>,
+        user_name: &str,
+        mut input: R) -> bool
 where
     R: Read + 'static
 {
@@ -49,7 +47,7 @@ where
         let mut input_buffer = [0; READ_BUFFER_SIZE];
         let size = input.read(&mut input_buffer).unwrap();
         if size == 0 {
-           break
+            break;
         }
 
         connections.retain(|mut connection|{
@@ -57,11 +55,17 @@ where
                 Ok(_) => true,
                 Err(e) => match e.kind() {
                     io::ErrorKind::BrokenPipe => false,
+                    io::ErrorKind::ConnectionReset => false,
                     _ => Err(e).unwrap(),
                 },
             }
         });
+
+        if connections.len() == 0 {
+            return false;
+        }
     }
+    true
 }
 
 pub fn listen<W, C>(
@@ -69,6 +73,7 @@ pub fn listen<W, C>(
         users: Option<&Vec<String>>,
         user_name: &str,
         service_addr: &SocketAddr,
+        once: bool,
         mut callback: C,
         mut output: W)
 where
@@ -89,18 +94,20 @@ where
         output.write(data).unwrap();
         true
     };
-    let mut server = Server::new(&service_addr, on_data);
+    let mut server = Server::new(&service_addr, once, on_data);
     let discovery_server = DiscoveryServer::new(&discovery_addr, &user_name, server.get_listener_port());
 
+    let running = AtomicBool::new(true);
     thread::scope(|s| {
         s.spawn(|_| {
-            loop {
-                server.listen(Some(Duration::from_millis(100)));
+            while running.load(Ordering::Relaxed) {
+                let alive = server.listen(Some(Duration::from_millis(100)));
+                running.store(alive, Ordering::Relaxed);
             }
         });
 
         s.spawn(|_| {
-            loop {
+            while running.load(Ordering::Relaxed) {
                 discovery_server.listen(Some(Duration::from_millis(100)));
             }
         });

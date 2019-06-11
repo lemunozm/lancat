@@ -10,10 +10,10 @@ For it, place into the repository and run:
 ```
 $ cargo install --path .
 ```
-In you have `~/.cargo/bin` in your PATH, you will be able to use *lancat*  everywhere in your computer!
+If you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* everywhere in your computer!
 
 # How it works?
-It has two main modes, for writing to the LAN and for reading from the LAN.
+It has two main modes. First of them is to send to the LAN, and the second one is to listen from the LAN.
 
 ## To the LAN
 For writing data to the LAN, run:
@@ -22,7 +22,7 @@ $ lancat
 hello lan
 ```
 
-Also, you can redirect the *standard input* from a file to write it into the LAN:
+Furthermore, you can redirect the *standard input* from a file to send it into the LAN:
 ```
 $ lancat < to_share.txt
 ```
@@ -31,15 +31,15 @@ $ lancat < to_share.txt
 For listening data from the LAN run `lancat` in listen mode with `-l`:
 ```
 $ lancat -l
-=========== username - ip:port ===========
+=========== username - 192.168.1.35:43230 ===========
 hello lan
 ```
 
-Or if you want to write the incoming data to a file, you can redirect the *standard output*:
+Or if you want to send the incoming data to a file, you can redirect the *standard output*:
 ```
 $ lancat -l -q > shared.txt
 ```
-the `-q` flag (also `--quiet`) will avoid to write the *user name line* into the file.
+the `-q` flag (also `--quiet`) will avoid to send the *user name line* into the file.
 
 ## Filtering users
 By default *lancat* notifies to the LAN with your OS user name.
@@ -53,9 +53,12 @@ $ lancat -u user1 user2
 $ lancat -l -u user1 user2
 ```
 
-In order to see which users are listening the lan, you can run *lancat* in the *search mode* with `-s`
+In order to see which users are listening the lan, you can run *lancat* in the *search mode* with `-s`:
 ```
 $ lancat -s
+Found 'user1' at: 192.168.1.72:44435
+Found 'user2' at: 192.168.1.72:44439
+Found 'user3' at: 192.168.1.54:44432
 ```
 
 For see all available options see the help: `lancat --help`.
@@ -67,19 +70,19 @@ We send a message filtering by *user1*:
 ```
 $ echo "Hello user1" | lancat -u user1
 ```
-We recive messages filtering by *user2*:
+We receive messages filtering by *user2*:
 ```
 $ lancat -l -q -u user2
 Hello user1
 ```
-Only users with names *user1* and *user2* will be able to write / read the communication.
+Only users with names *user1* and *user2* will be able to send / listen the communication.
 
 ### Aliasing names
 We send a message only to *Pepito* identifying as *Pepito*:
 ```
 $ echo "Hello Juanito, I'm Pepito" | lancat -n Pepito -u Juanito
 ```
-We recive messages intended only to *Juanito* that only *Pepito* writes:
+We receive messages intended only to *Juanito* that only *Pepito* sends:
 ```
 $ lancat -l -q -n Juanito -u Pepito
 Hello Juanito, I'm Pepito
