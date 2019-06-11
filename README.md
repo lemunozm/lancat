@@ -1,5 +1,5 @@
 # What is *lancat*?
-*lancat* is a tool that extend the behavior of `cat` linux utility to the LAN.
+*lancat* is a tool that extends the behaviour of `cat` linux utility to the LAN.
 It sends a multicast message for searching *lancat* listeners in the LAN,
 then creates one-to-one tcp connection for each listener found in order to transfer the information
 in a reliable way and without saturating the network.

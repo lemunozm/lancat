@@ -5,7 +5,7 @@ authors = ["Luis Enrique Muñoz Martín <lemunozm@gmail.com>"]
 edition = "2018"
 readme = "README.md"
 license-file = "LICENSE"
-description = "lancat is a tool that extend the behavior of cat linux utility to the LAN"
+description = "lancat is a tool that extends the behaviour of cat linux utility to the LAN"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
