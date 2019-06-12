@@ -1,3 +1,6 @@
+[![lancat](https://img.shields.io/crates/v/lancat.svg)](https://crates.io/crates/lancat)
+[![downloads](https://img.shields.io/crates/d/lancat.svg)](https://crates.io/crates/lancat)
+
 # What is *lancat*?
 *lancat* is a tool that extends the behaviour of `cat` linux utility to the LAN.
 It sends a multicast message for searching *lancat* listeners in the LAN,
@@ -10,6 +13,8 @@ in a reliable way and without saturating the network.
 $ cargo install lancat
 ```
 If you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* everywhere in your computer!
+
+*Currently it only supports `linux`.*
 
 # How it works?
 It has two main modes. First of them is to send to the LAN, and the second one is to listen from the LAN.
