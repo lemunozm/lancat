@@ -93,5 +93,11 @@ $ lancat -r -q -n Juanito -u Pepito
 Hello Juanito, I'm Pepito
 ```
 
+# Changelog
+#### v0.2.0
+* Modified cli
+#### v0.1.0
+* *lancat* base
+
 [rust]: https://www.rust-lang.org/
 [cargo]: https://doc.rust-lang.org/cargo/getting-started/installation.html
