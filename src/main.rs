@@ -6,8 +6,9 @@ extern crate lancat;
 use std::io;
 use std::net::SocketAddr;
 
+const WRITE: &str = "write";
+const READ: &str = "read";
 const SEARCH: &str = "search";
-const LISTEN: &str = "listen";
 const USERS: &str = "users";
 const NAME: &str = "name";
 const QUIET: &str = "quiet";
@@ -24,18 +25,26 @@ fn main() {
         .version_short("v")
         .author("https://github.com/lemunozm/lancat")
         .about("cat tool on the LAN")
-        .arg(clap::Arg::with_name(LISTEN)
-            .long(LISTEN)
-            .short("l")
-            .help("Listen mode")
+        .arg(clap::Arg::with_name(WRITE)
+            .long(WRITE)
+            .short("w")
+            .help("Write data, writes data to the LAN")
         )
-        .arg(clap::Arg::with_name(USERS)
-            .long(USERS)
-            .short("u")
-            .value_name("users")
-            .multiple(true)
-            .help("User list to take into account for the communication")
-            .conflicts_with(SEARCH)
+        .arg(clap::Arg::with_name(READ)
+            .long(READ)
+            .short("r")
+            .help("Read mode, read data from the LAN")
+        )
+        .arg(clap::Arg::with_name(SEARCH)
+            .long(SEARCH)
+            .short("s")
+            .help("Only list the users in the LAN")
+        )
+        .group(clap::ArgGroup::with_name("mode")
+            .arg(WRITE)
+            .arg(READ)
+            .arg(SEARCH)
+            .required(true)
         )
         .arg(clap::Arg::with_name(NAME)
             .long(NAME)
@@ -43,19 +52,23 @@ fn main() {
             .value_name("user name")
             .default_value(&user)
             .help("User name identification in the LAN")
-            .conflicts_with(SEARCH)
+        )
+        .arg(clap::Arg::with_name(USERS)
+            .long(USERS)
+            .short("u")
+            .value_name("users")
+            .multiple(true)
+            .help("User list to take into account for the communication")
         )
         .arg(clap::Arg::with_name(ONCE)
             .long(ONCE)
             .short("o")
             .help("Listen only once and exit")
-            .requires(LISTEN)
         )
         .arg(clap::Arg::with_name(QUIET)
             .long(QUIET)
             .short("q")
             .help("Do not show the lancat specific output")
-            .conflicts_with(SEARCH)
         )
         .arg(clap::Arg::with_name(SERVICE_PORT)
             .long(SERVICE_PORT)
@@ -63,13 +76,6 @@ fn main() {
             .value_name("number")
             .default_value("0")
             .help("Port used for data communication")
-            .requires(LISTEN)
-        )
-        .arg(clap::Arg::with_name(SEARCH)
-            .long(SEARCH)
-            .short("s")
-            .help("Only list the users in the LAN")
-            .conflicts_with(LISTEN)
         )
         .arg(clap::Arg::with_name(DISCOVERY_PORT)
             .long(DISCOVERY_PORT)
@@ -107,7 +113,7 @@ fn main() {
             println!("Found '{}' at: {}", listener.name, listener.addr);
         }
     }
-    else if matches.is_present(LISTEN) {
+    else if matches.is_present(READ) {
         let on_listen = |name: &str, remote: &SocketAddr| {
             if verbose {
                 let term_width = term_size::dimensions().unwrap().0;

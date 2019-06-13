@@ -1,10 +1,10 @@
 [package]
 name = "lancat"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Luis Enrique Muñoz Martín <lemunozm@gmail.com>"]
 edition = "2018"
 readme = "README.md"
-license-file = "LICENSE"
+license = "Apache-2.0"
 description = "lancat is a tool that extends the behaviour of cat linux utility to the LAN"
 
 [dependencies]
