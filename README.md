@@ -1,4 +1,5 @@
 [![lancat](https://img.shields.io/crates/v/lancat.svg)](https://crates.io/crates/lancat)
+[![license](https://img.shields.io/crates/l/lancat.svg)](https://www.apache.org/licenses/LICENSE-2.0.txt)
 [![downloads](https://img.shields.io/crates/d/lancat.svg)](https://crates.io/crates/lancat)
 
 # What is *lancat*?
