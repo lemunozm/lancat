@@ -76,7 +76,7 @@ impl DiscoveryServer {
     }
 
     pub fn listen(&self, timeout: Option<Duration>) {
-        let mut buffer = [0; 0]; //CHECK: the behaviour in windows
+        let mut buffer = [0; 1]; 
         self.socket.set_read_timeout(timeout).unwrap();
         match self.socket.recv_from(&mut buffer) {
             Ok((_, remote_addr)) => {
