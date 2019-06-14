@@ -15,7 +15,7 @@ $ cargo install lancat
 ```
 If you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* everywhere in your computer!
 
-*Supported on `linux` and `windows`, but can be works in others platforms.*
+*Supports `linux` and `windows`, but could works in others platforms.*
 
 # How it works?
 It has two main modes: *write* to the LAN, and *read* from the LAN.
