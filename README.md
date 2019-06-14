@@ -94,6 +94,9 @@ Hello Juanito, I'm Pepito
 ```
 
 # Changelog
+#### v0.3.0
+* Windows support.
+* Listen callback is also called when port and ip changes (not only the user name).
 #### v0.2.0
 * Modified cli
 #### v0.1.0
