@@ -81,15 +81,17 @@ where
     W: Write + Send
 {
     let mut last_user = String::new();
+    let mut last_remote = "0.0.0.0:0".parse().unwrap();
     let on_data = |user: &str, remote: &SocketAddr, data: &[u8]| -> bool {
         if let Some(users) = users {
             if !users.iter().any(|u| u == user) {
                 return false;
             }
         }
-        if last_user != user {
+        if last_user != user || last_remote != *remote {
             callback(user, remote);
             last_user = String::from(user);
+            last_remote = remote.clone();
         }
         output.write(data).unwrap();
         true
