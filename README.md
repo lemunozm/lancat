@@ -15,6 +15,8 @@ $ cargo install lancat
 ```
 If you have `~/.cargo/bin` in your PATH, you will be able to use *lancat* everywhere in your computer!
 
+*Windows users can also use the redistributable that comes with each release instead of install it.*
+
 *Supports `linux` and `windows`, but could work in others platforms.*
 
 # How it works?
