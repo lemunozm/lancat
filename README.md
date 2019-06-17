@@ -95,6 +95,19 @@ $ lancat -r -q -n Juanito -u Pepito
 Hello Juanito, I'm Pepito
 ```
 
+## File listener server: log the LAN
+The following is a script that saves the received data of each connection to a log file continually.
+```
+#!/bin/bash
+while true
+do
+    lancat -r -o -q > latest.log
+    DATE=`date "+%m-%d-%Y_%H-%M-%S"`
+    mv latest.log $DATE.log
+    echo "Received file at: $DATE"
+done
+```
+
 # Changelog
 #### v0.3.0
 * Windows support.
